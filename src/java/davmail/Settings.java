@@ -154,6 +154,8 @@ public final class Settings {
         SETTINGS.put("davmail.popPort", "1110");
         SETTINGS.put("davmail.imapPort", "1143");
         SETTINGS.put("davmail.smtpPort", "1025");
+        SETTINGS.put("davmail.smtpEmbeddedUsername","");
+        SETTINGS.put("davmail.smtpEmbeddedPassword","");
         SETTINGS.put("davmail.caldavPort", "1080");
         SETTINGS.put("davmail.ldapPort", "1389");
         SETTINGS.put("davmail.clientSoTimeout", "");

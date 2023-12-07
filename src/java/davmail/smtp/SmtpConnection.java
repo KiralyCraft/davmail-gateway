@@ -21,6 +21,7 @@ package davmail.smtp;
 import davmail.AbstractConnection;
 import davmail.BundleMessage;
 import davmail.DavGateway;
+import davmail.Settings;
 import davmail.exception.DavMailException;
 import davmail.exchange.DoubleDotInputStream;
 import davmail.exchange.ExchangeSessionFactory;
@@ -60,9 +61,18 @@ public class SmtpConnection extends AbstractConnection {
         String line;
         StringTokenizer tokens;
         List<String> recipients = new ArrayList<>();
+        userName = Settings.getProperty("davmail.smtpEmbeddedUsername");
+        password = Settings.getProperty("davmail.smtpEmbeddedPassword");
+        boolean embeddedAuth = (password != null && userName != null);
 
         try {
             ExchangeSessionFactory.checkConfig();
+
+            // if there are embedded credentials, authenticate already
+            if (embeddedAuth) {
+                authenticate(true);
+            }
+
             sendClient("220 DavMail " + DavGateway.getCurrentVersion() + " SMTP ready at " + new Date());
             for (; ;) {
                 line = readClient();
@@ -83,7 +93,7 @@ public class SmtpConnection extends AbstractConnection {
                     } else if (state == State.PASSWORD) {
                         // AUTH LOGIN, read password
                         password = IOUtil.decodeBase64AsString(line);
-                        authenticate();
+                        authenticate(false);
                     } else if ("QUIT".equalsIgnoreCase(command)) {
                         sendClient("221 Closing connection");
                         break;
@@ -93,7 +103,9 @@ public class SmtpConnection extends AbstractConnection {
                         sendClient("250-" + tokens.nextToken());
                         // inform server that AUTH is supported
                         // actually it is mandatory (only way to get credentials)
-                        sendClient("250-AUTH LOGIN PLAIN");
+                        if (!embeddedAuth) {
+                            sendClient("250-AUTH LOGIN PLAIN");
+                        }
                         sendClient("250-8BITMIME");
                         sendClient("250 Hello");
                     } else if ("HELO".equalsIgnoreCase(command)) {
@@ -103,7 +115,7 @@ public class SmtpConnection extends AbstractConnection {
                             String authType = tokens.nextToken();
                             if ("PLAIN".equalsIgnoreCase(authType) && tokens.hasMoreElements()) {
                                 decodeCredentials(tokens.nextToken());
-                                authenticate();
+                                authenticate(false);
                             } else if ("LOGIN".equalsIgnoreCase(authType)) {
                                 if (tokens.hasMoreTokens()) {
                                     // user name sent on auth line
@@ -121,7 +133,7 @@ public class SmtpConnection extends AbstractConnection {
                             sendClient("451 Error : authentication type not specified");
                         }
                     } else if ("MAIL".equalsIgnoreCase(command)) {
-                        if (state == State.AUTHENTICATED) {
+                        if (state == State.AUTHENTICATED || embeddedAuth) {
                             state = State.STARTMAIL;
                             recipients.clear();
                             sendClient("250 Sender OK");
@@ -224,11 +236,13 @@ public class SmtpConnection extends AbstractConnection {
      *
      * @throws IOException on error
      */
-    protected void authenticate() throws IOException {
+    protected void authenticate(boolean silentAuth) throws IOException {
         try {
             session = ExchangeSessionFactory.getInstance(userName, password);
             logConnection("LOGON", userName);
-            sendClient("235 OK Authenticated");
+            if (!silentAuth) {
+                sendClient("235 OK Authenticated");
+            }
             state = State.AUTHENTICATED;
         } catch (Exception e) {
             logConnection("FAILED", userName);
