@@ -195,6 +195,7 @@ public class O365Token {
         O365Token token = null;
         if (Settings.getBooleanProperty("davmail.oauth.persistToken", true)) {
             String encryptedRefreshToken = Settings.loadRefreshToken(username);
+
             if (encryptedRefreshToken != null) {
                 String refreshToken;
                 try {
