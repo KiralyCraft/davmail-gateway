@@ -181,9 +181,9 @@ public class SmtpConnection extends AbstractConnection {
                                 // Create a sample MimeMessage (you would replace this with your own MimeMessage creation logic)
 
                                 // Enable FROM NAT-ing, if the subject matches the NAT prefix.
-                                String currentSender = mimeMessage.getFrom()[0].toString().replace("<","").replace(">","");
-                                if (currentSender.startsWith(SUBJECT_NAT_PREFIX)) {
-                                    String patchedSender = currentSender.substring(SUBJECT_NAT_PREFIX.length());
+                                String currentSender = mimeMessage.getFrom()[0].toString();
+                                if (currentSender.contains(SUBJECT_NAT_PREFIX)) {
+                                    String patchedSender = currentSender.replace(SUBJECT_NAT_PREFIX,"");
                                     mimeMessage.setSubject(mimeMessage.getSubject() + " (Sender: " + patchedSender + ")");
                                     mimeMessage.setFrom(userName);
                                 }
